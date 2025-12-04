@@ -1,0 +1,14 @@
+{
+    "name": "HD Picture Converter",
+    "short_name": "hdpicview-rs",
+    "description": "Converts image files for use with TheLastMillennial's TI-83+ CE HD Picture Viewer",
+	"start_url": "index.html",
+    "icons": [
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+			"type": "image/png"
+        }
+    ],
+    "display": "standalone"
+}

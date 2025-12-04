@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>HD Picture converter for CE</title>
+        <link rel="shortcut icon" href="icon-16.png">
+        <link rel="apple-touch-icon" href="icon-512.png">
+        <link rel="manifest" href="hdpicview-rs.webmanifest">
+
+        <link rel="canonical" href="https://taricorp.gitlab.io/hdpictureconverter-rs/">
+        <meta name="description"
+              content="Converts pictures to be viewable on TI-84 Plus CE and TI-83 Premium CE calculators using
+                       TheLastMillennial's HD Picture Viewer program">
+        <meta property="og:image" content="icon-512.png">
+
+        <link rel="stylesheet" href="./vendor/bootstrap-4.6.2.min.css">
+        <script src="./vendor/jquery-3.5.1-slim.min.js"></script>
+        <script src="./vendor/bootstrap-4.6.2.bundle.min.js"></script>
+
+        <script defer src='./pkg/hdpictureconverter_web.js'></script>
+        <script defer src='./index.js'></script>
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="jumbotron">
+                <h1>HD Picture converter</h1>
+                <p class="lead">Converts images to the format used by TheLastMillennial's
+                    <a href="https://github.com/TheLastMillennial/HD-Picture-Viewer">HD
+                        Picture Viewer</a> on TI-84 Plus CE and TI-83 Premium CE calculators.</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 col-lg-4 bg-info text-light rounded d-flex flex-column justify-content-center">
+                    <h2>How to use</h2>
+                    <ol>
+                        <li>Choose an image file in the form, or drag and drop an image file</li>
+                        <li>Specify a name for the output</li>
+                        <li>Press the convert button</li>
+                        <li>Wait while your image is processed</li>
+                        <li>Press the save button when complete to save a ZIP file containing appvars to be sent to your calculator</li>
+                    </ol>
+                    <p>
+                        Large images can require a lot of memory on your calculator; resizing them may be
+                        useful depending on how much detail you want to retain.
+                        <a href="https://squoosh.app/">Squoosh</a> is a handy tool to do that right
+                        from your web browser.
+                    </p>
+                </div>
+                <div class="col-sm-12 col-md-6 col-lg-4">
+                    <h2>Picture input</h2>
+                    <form id="inputsForm">
+                        <div class="form-group">
+                            <input type="file" required id="imageInput" accept="image/*" autocomplete="off"
+                                   class="form-control-file">
+                        </div>
+                        <div class="form-group">
+                            <label for="varPrefixInput">Appvar name prefix:</label>
+                            <input id="varPrefixInput" type="text" autocomplete="off"
+                                   required pattern="[A-Z]{2}" placeholder="AA"
+                                   class="form-control">
+                            <small class="form-text">This should be unique among images stored on the calculator, and must be
+                               exactly two capital letters.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <input type="submit" id="submitButton" value="Not ready yet.."
+                                   disabled class="form-control input-lg btn btn-primary">
+                        </div>
+                    </form>
+                </div>
+                <div class="col-sm-12 col-md-6 col-lg-4 d-flex align-items-center justify-content-center">
+                    <img id="preview" alt="Your chosen image will be shown here"
+                         class="img-fluid img-thumbnail">
+                </div>
+            </div>
+            <div class="row pt-3">
+                <div class="col">
+                    <h2>About</h2>
+                    <p>
+                        This web app converts images to a format that can be viewed on a Texas Instruments
+                        TI-84+ CE or TI-83 Premium (as well as variants of each) using TheLastMillennial's
+                        HD Picture Viewer. Currently only the image format used in version
+                        <a href="https://www.cemetech.net/downloads/files/2434/x2949">2.0.0</a>
+                        is supported, but new features and format changes are expected to be
+                        handled by newer versions of this converter as needed.
+                    </p>
+                    <img class="float-left mr-2" width=120 src="icon-512.png">
+                    <p>
+                        This converter was written by <a href="https://www.taricorp.net/about">Peter Marheine</a>
+                        and is open source, implemented in Rust with a custom HTML and Javascript frontend.
+                        The source code can be found at <a href="https://gitlab.com/taricorp/hdpictureconverter-rs">
+                        gitlab.com/taricorp/hdpictureconverter-rs</a> and can be freely copied or modified
+                        subject to the terms of the (permissive) license found there.
+                    </p>
+                    <p>
+                        Bug reports and feature requests for this converter should be made via
+                        <a href="https://gitlab.com/taricorp/hdpictureconverter-rs/-/issues">the Gitlab
+                            issue tracker</a>. Issues with the viewer itself should be reported to
+                        TheLastMillennial instead, such as
+                        <a href="https://github.com/TheLastMillennial/HD-Picture-Viewer">on GitHub</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="statusModalTitle">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="statusModalTitle">Converting picture</h3>
+                    </div>
+                    <div class="modal-body lead" id="results">
+                        <div class="text-center" id="conversionText">
+                        </div>
+                        <progress style="width: 100%; height: 3em;" id="conversionProgress"></progress>
+                    </div>
+                    <div class="modal-footer">
+                        <a id="downloadZipLink" download class="hidden"></a>
+                        <button id="downloadZipButton" type="button" class="btn btn-primary" disabled>Save zip</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="updateToast" class="toast p-3" role="alert"
+             style="position: fixed; bottom: 10px; left: 50%; transform: translate(-50%, 0);"
+             aria-live="assertive" aria-atomic="true" data-autohide="false">
+            <div>An update is available: refresh to update.</div>
+            <div class="d-flex justify-content-between mt-1">
+                <button id="hideToastButton" class="btn btn-secondary">Ignore</button>
+                <button id="updateAppButton" class="btn btn-danger">Update now</button>
+            </div>
+        </div>
+    </body>
+</html>
