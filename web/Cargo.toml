@@ -1,0 +1,16 @@
+[package]
+name = "hdpictureconverter-web"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2.83"
+hdpictureconverter = { path = ".." }
+zip = { version = "0.6.3", default-features = false, features = ["deflate"] }
+js-sys = "0.3.60"
+
+[features]
