@@ -1,0 +1,36 @@
+[package]
+name = "hdpictureconverter"
+version = "0.1.0"
+edition = "2021"
+
+readme = "README.md"
+license = "BSD-2-Clause"
+
+[workspace]
+members = ["web"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "cli"
+required-features = ["clap"]
+
+[dependencies]
+
+clap = { version = "4.0.18", optional = true }
+rgb = "0.8.34"
+tifiles = "0.2.0"
+zx0 = "1.0.0"
+
+[dependencies.image]
+version = "0.24.4"
+default-features = false
+features = ["gif", "jpeg", "ico", "png", "tiff", "webp", "bmp"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.imagequant]
+version = "4.0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.imagequant]
+version = "4.0.4"
+default-features = false
