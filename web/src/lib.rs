@@ -1,5 +1,7 @@
 use hdpictureconverter::Image;
 use std::io::{Cursor, Write};
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use wasm_bindgen::prelude::*;
 use zip::ZipWriter;
 
@@ -92,17 +94,24 @@ impl Converter {
             // First write the appvar to a memory buffer, since we need to seek within it
             let var_data = tile.write_appvar(Cursor::new(Vec::new()))?.into_inner();
 
-            // ..then write it into the zip
-            zip.start_file(format!("{}.8xv", tile.appvar_name()), zip_options)?;
-            zip.write_all(&var_data)?;
+            // Compress the appvar bytes to gzip and write as `.8xg` inside the zip
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&var_data)?;
+            let gz_bytes = encoder.finish()?;
+
+            zip.start_file(format!("{}.8xg", tile.appvar_name()), zip_options)?;
+            zip.write_all(&gz_bytes)?;
         }
 
         // Dump palette to appvar
         let palette_data = im
             .write_palette_appvar(Cursor::new(Vec::new()))?
             .into_inner();
-        zip.start_file(format!("{}.8xv", im.palette_appvar_name()), zip_options)?;
-        zip.write_all(&palette_data)?;
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&palette_data)?;
+        let gz_palette = encoder.finish()?;
+        zip.start_file(format!("{}.8xg", im.palette_appvar_name()), zip_options)?;
+        zip.write_all(&gz_palette)?;
 
         let zip_bytes = zip.finish()?.into_inner();
 

@@ -12,5 +12,6 @@ wasm-bindgen = "0.2.83"
 hdpictureconverter = { path = ".." }
 zip = { version = "0.6.3", default-features = false, features = ["deflate"] }
 js-sys = "0.3.60"
+flate2 = { version = "1.1", default-features = false, features = ["miniz_oxide"] }
 
 [features]

@@ -1,5 +1,8 @@
-use std::io::BufReader;
+use std::io::{BufReader, Cursor, Write};
 use std::path::PathBuf;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use tar::Builder as TarBuilder;
 
 use clap::builder::PossibleValue;
 use clap::{Arg, Command};
@@ -28,6 +31,7 @@ fn var_prefix_str(s: &str) -> Result<String, String> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 enum QuantizerChoice {
     LibImageQuant,
     NeuQuant,
@@ -68,12 +72,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let var_prefix = m.get_one::<String>("var_prefix").unwrap();
     let out_dir = m.get_one::<PathBuf>("out_dir").unwrap();
 
-    let out_path = |filename: &str| -> PathBuf {
-        let mut p = out_dir.clone();
-        p.push(filename);
-        p.set_extension("8xv");
-        p
-    };
+    // Produce a single compressed `.8xg` file containing all appvar bytes
+    // (tar of individual `.8xv` files, gzipped).
+    let out_file_name = image_file
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "image".to_string());
+    let mut out_path = out_dir.clone();
+    out_path.push(out_file_name);
+    out_path.set_extension("8xg");
 
     eprintln!("Opening image file {:?}", &image_file);
     let image = {
@@ -88,27 +95,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Quantizing..");
     let image = image.quantize();
 
-    // Write tiles
-    eprint!("Writing tiles..");
+    // Build a tar archive in memory with all `.8xv` appvars, then gzip it to one `.8xg` file.
+    eprint!("Packaging appvars into {}..", out_path.display());
+
+    let mut tar_buf = Vec::new();
+    let mut tar = TarBuilder::new(&mut tar_buf);
+
     for tile in image.tiles() {
-        let p = out_path(tile.appvar_name());
+        eprint!(" {}", tile.appvar_name());
+        let mut buf = Cursor::new(Vec::new());
+        tile.write_appvar(&mut buf)?;
+        let var_data = buf.into_inner();
 
-        eprint!(" {:?}", &p);
-        let f = std::fs::File::create(p)?;
-        tile.write_appvar(f)?;
+        let mut header = tar::Header::new_gnu();
+        header.set_size(var_data.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        tar.append_data(&mut header, format!("{}.8xv", tile.appvar_name()), Cursor::new(var_data))?;
     }
+
+    // Palette
+    eprint!(" palette");
+    let mut pbuf = Cursor::new(Vec::new());
+    image.write_palette_appvar(&mut pbuf)?;
+    let palette_data = pbuf.into_inner();
+    let mut pheader = tar::Header::new_gnu();
+    pheader.set_size(palette_data.len() as u64);
+    pheader.set_mode(0o644);
+    pheader.set_cksum();
+    tar.append_data(&mut pheader, format!("{}.8xv", image.palette_appvar_name()), Cursor::new(palette_data))?;
+
+    tar.finish()?;
+    // drop the tar builder to release the mutable borrow of `tar_buf`
+    std::mem::drop(tar);
+
+    // Gzip the tar and write to the single .8xg output file
     eprintln!();
-
-    // Write palette
-    eprint!("Writing palette.. ");
-    {
-        let mut p = out_path(&image.palette_appvar_name());
-        p.set_extension("8xv");
-        eprintln!("{:?}", &p);
-
-        let f = std::fs::File::create(p)?;
-        image.write_palette_appvar(f)?;
-    }
+    let out_file = std::fs::File::create(&out_path)?;
+    let mut encoder = GzEncoder::new(out_file, Compression::default());
+    encoder.write_all(&tar_buf)?;
+    encoder.finish()?;
 
     Ok(())
 }

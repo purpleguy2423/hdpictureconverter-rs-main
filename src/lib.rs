@@ -123,7 +123,7 @@ pub struct QuantizedImage {
 
 impl QuantizedImage {
     /// Return an iterator over image [`Tile`]s.
-    pub fn tiles(&self) -> Tiles {
+    pub fn tiles(&self) -> Tiles<'_> {
         Tiles {
             image: self,
             next: (0, 0),

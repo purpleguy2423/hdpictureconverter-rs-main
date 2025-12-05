@@ -1,0 +1,9 @@
+[alias]
+# Build only the CLI binary with the `clap` feature enabled
+build-cli = "build --bin cli --features clap"
+
+# Build only the library (won't build binary targets)
+build-lib = "build --lib"
+
+# Build the web member package (workspace member `hdpictureconverter-web`)
+build-web = "build -p hdpictureconverter-web"
